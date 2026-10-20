@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Калькулятор долей</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#F4F6F9',
+                        card: '#FFFFFF',
+                        primary: '#2B3151',
+                        primaryHover: '#1E2340',
+                        accent: '#3B82F6',
+                        success: '#10B981'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-slate-800 min-h-screen p-6 md:p-12 font-sans">
+    <div class="max-w-3xl mx-auto">
+        
+        <!-- Навигация (Табы) -->
+        <div class="flex space-x-4 mb-6">
+            <button onclick="switchTab('msk')" id="tab-btn-msk" class="px-6 py-2.5 bg-primary text-white rounded-md font-medium transition-colors shadow-sm border border-primary text-sm">МСК</button>
+            <button onclick="switchTab('opeka')" id="tab-btn-opeka" class="px-6 py-2.5 bg-white text-slate-600 hover:bg-slate-50 rounded-md font-medium transition-colors border border-slate-200 shadow-sm text-sm">Опека (Встречная сделка)</button>
+        </div>
+
+        <div class="bg-card p-8 rounded-xl shadow-[0_2px_15px_rgba(0,0,0,0.04)] border border-slate-100 relative">
+            
+            <!-- ВКЛАДКА 1: МСК -->
+            <div id="tab-content-msk" class="block">
+                <div class="space-y-5 mb-8">
+                    <div class="flex justify-between items-center">
+                        <label class="text-slate-500 text-sm font-medium w-1/2">Стоимость объекта</label>
+                        <div class="flex items-center bg-white border border-slate-300 rounded-md px-3 py-2 w-1/2 max-w-[240px] focus-within:border-accent focus-within:ring-1 focus-within:ring-accent transition-all shadow-sm">
+                            <input type="text" id="price" oninput="formatCurrency(this)" class="bg-transparent outline-none w-full text-slate-800" placeholder="6 870 000">
+                            <span class="ml-2 text-slate-400 text-sm">₽</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                        <label class="text-slate-500 text-sm font-medium w-1/2">Сумма МСК</label>
+                        <div class="flex items-center bg-white border border-slate-300 rounded-md px-3 py-2 w-1/2 max-w-[240px] focus-within:border-accent focus-within:ring-1 focus-within:ring-accent transition-all shadow-sm">
+                            <input type="text" id="msk" oninput="formatCurrency(this)" class="bg-transparent outline-none w-full text-slate-800" placeholder="963 243.20">
+                            <span class="ml-2 text-slate-400 text-sm">₽</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                        <label class="text-slate-500 text-sm font-medium w-1/2">Количество членов семьи</label>
+                        <div class="flex items-center bg-white border border-slate-300 rounded-md px-3 py-2 w-1/2 max-w-[240px] focus-within:border-accent focus-within:ring-1 focus-within:ring-accent transition-all shadow-sm">
+                            <input type="number" id="family" class="bg-transparent outline-none w-full text-slate-800" placeholder="5">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center pt-2 border-t border-slate-100">
+                        <label class="text-slate-500 text-sm font-medium w-1/2">Общая площадь <span class="font-normal text-xs text-slate-400 block">(Для перевода доли в кв.м.)</span></label>
+                        <div class="flex items-center bg-white border border-slate-300 rounded-md px-3 py-2 w-1/2 max-w-[240px] focus-within:border-accent focus-within:ring-1 focus-within:ring-accent transition-all shadow-sm">
+                            <input type="text" id="area" oninput="formatArea(this)" class="bg-transparent outline-none w-full text-slate-800" placeholder="66.9">
+                            <span class="ml-2 text-slate-400 text-sm">м²</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="calculate()" class="bg-primary hover:bg-primaryHover text-white font-medium py-2.5 px-6 rounded-md transition-colors shadow-sm text-sm mb-8 w-full">
+                    Рассчитать
+                </button>
+
+                <div id="msk_results" class="hidden">
+                    <div class="flex items-center justify-between mb-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                        <span class="text-slate-600 text-sm font-medium">Сумма МСК на 1 члена семьи:</span>
+                        <span id="res_money" class="font-bold text-slate-800 text-lg">0 ₽</span>
+                    </div>
+
+                    <div class="flex items-center justify-between mb-8 bg-[#FFFBEB] p-5 rounded-lg border border-[#FDE68A] shadow-sm">
+                        <div>
+                            <div class="text-amber-800 text-sm font-bold uppercase tracking-wide">Минимальная доля по МСК</div>
+                            <div class="text-amber-700 text-xs mt-1">На каждого члена семьи</div>
+                        </div>
+                        <div class="text-right">
+                            <div id="res_min_fraction" class="font-bold text-amber-600 text-3xl">-</div>
+                            <div id="res_min_sqm" class="text-amber-700 text-sm font-medium mt-1">~ 0 кв. м.</div>
+                        </div>
+                    </div>
+                    
+                    <hr class="border-slate-100 my-6">
+
+                    <p class="text-sm text-slate-500 mb-4 font-medium">Выберите формат долей для договора:</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+                        <div class="bg-slate-50 border border-slate-200 p-5 rounded-xl text-center cursor-pointer hover:border-accent hover:bg-white hover:shadow-md transition-all group" onclick="copyText('res_100')">
+                            <div class="text-xs text-slate-500 mb-1 group-hover:text-accent transition-colors">Стандарт ЕГРН</div>
+                            <div id="res_100" class="text-2xl font-bold text-slate-800">-</div>
+                        </div>
+                        <div class="bg-slate-50 border border-slate-200 p-5 rounded-xl text-center cursor-pointer hover:border-accent hover:bg-white hover:shadow-md transition-all group" onclick="copyText('res_area')">
+                            <div class="text-xs text-slate-500 mb-1 group-hover:text-accent transition-colors">По площади</div>
+                            <div id="res_area" class="text-2xl font-bold text-slate-800">-</div>
+                        </div>
+                        <div class="bg-slate-50 border border-slate-200 p-5 rounded-xl text-center cursor-pointer hover:border-accent hover:bg-white hover:shadow-md transition-all group" onclick="copyText('res_simple')">
+                            <div class="text-xs text-slate-500 mb-1 group-hover:text-accent transition-colors">Простая дробь</div>
+                            <div id="res_simple" class="text-2xl font-bold text-slate-800">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ВКЛАДКА 2: ОПЕКА -->
+            <div id="tab-content-opeka" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    
+                    <!-- Карточка продаваемого объекта -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-6 shadow-sm">
+                        <h3 class="text-sm font-bold tracking-wide text-slate-800 uppercase mb-5 flex items-center">
+                            <span class="w-2.5 h-2.5 rounded-full bg-rose-400 mr-2.5"></span>
+                            Продаваемый объект
+                        </h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs text-slate-500 mb-1 font-medium">Стоимость в ДКП (₽)</label>
+                                <input type="text" id="old_price" oninput="formatCurrency(this)" class="bg-white border border-slate-300 rounded-md px-3 py-2 w-full outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-500 mb-1 font-medium">Общая площадь (м²)</label>
+                                <input type="text" id="old_area" oninput="formatArea(this)" class="bg-white border border-slate-300 rounded-md px-3 py-2 w-full outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all">
+                            </div>
+                            
+                            <!-- Выделенный блок доли -->
+                            <div class="pt-5 mt-5 border-t border-slate-200">
+                                <label class="block text-xs text-slate-700 font-bold mb-2">Доля ребенка в этом объекте:</label>
+                                <div class="flex items-center space-x-3">
+                                    <input type="number" id="child_num" class="bg-white border border-slate-300 rounded px-3 py-1.5 w-16 text-center outline-none focus:border-accent" placeholder="1">
+                                    <span class="text-slate-400 font-medium">/</span>
+                                    <input type="number" id="child_den" class="bg-white border border-slate-300 rounded px-3 py-1.5 w-16 text-center outline-none focus:border-accent" placeholder="4">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Карточка приобретаемого объекта -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-6 shadow-sm h-fit">
+                        <h3 class="text-sm font-bold tracking-wide text-slate-800 uppercase mb-5 flex items-center">
+                            <span class="w-2.5 h-2.5 rounded-full bg-success mr-2.5"></span>
+                            Приобретаемый объект
+                        </h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs text-slate-500 mb-1 font-medium">Стоимость в ДКП (₽)</label>
+                                <input type="text" id="new_price" oninput="formatCurrency(this)" class="bg-white border border-slate-300 rounded-md px-3 py-2 w-full outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-500 mb-1 font-medium">Общая площадь (м²)</label>
+                                <input type="text" id="new_area" oninput="formatArea(this)" class="bg-white border border-slate-300 rounded-md px-3 py-2 w-full outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center bg-white p-4 rounded-lg border border-slate-200 mb-6 shadow-sm">
+                    <input type="checkbox" id="use_buffer" class="w-5 h-5 text-accent bg-slate-50 border-slate-300 rounded focus:ring-accent focus:ring-2 cursor-pointer" checked>
+                    <label for="use_buffer" class="ml-3 text-sm text-slate-600 cursor-pointer">
+                        Добавить запас <span class="font-bold text-slate-800">+1 м²</span> к старой площади ребенка
+                    </label>
+                </div>
+
+                <button onclick="calculateOpeka()" class="bg-primary hover:bg-primaryHover text-white font-medium py-2.5 px-6 rounded-md transition-colors shadow-sm text-sm w-full">
+                    Проверить требования опеки
+                </button>
+
+                <!-- Новые результаты Опеки -->
+                <div id="opeka_results" class="hidden">
+                    <hr class="border-slate-100 my-8">
+                    
+                    <!-- Блок Было/Стало -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 text-sm">
+                        <div class="bg-white p-4 rounded-xl border border-slate-200">
+                            <div class="text-slate-500 mb-2 font-medium text-xs uppercase tracking-wide">Было у ребенка:</div>
+                            <div class="flex justify-between mb-1"><span class="text-slate-500">Площадь:</span> <span id="res_old_area" class="font-bold text-slate-800">0 м²</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Стоимость:</span> <span id="res_old_value" class="font-bold text-slate-800">0 ₽</span></div>
+                        </div>
+                        <div class="bg-[#F0FDF4] p-4 rounded-xl border border-[#BBF7D0]">
+                            <div class="text-success mb-2 font-medium text-xs uppercase tracking-wide">Станет (по итоговой дроби):</div>
+                            <div class="flex justify-between mb-1"><span class="text-slate-600">Площадь:</span> <span id="res_new_area" class="font-bold text-success">0 м²</span></div>
+                            <div class="flex justify-between"><span class="text-slate-600">Стоимость:</span> <span id="res_new_value" class="font-bold text-success">0 ₽</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Новые карточки долей -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="bg-slate-50 border border-slate-200 p-5 rounded-xl text-center">
+                            <div class="text-xs text-slate-500 mb-2 font-medium">Рекомендуемая доля,<br>исходя из площади</div>
+                            <div id="res_opeka_area_only" class="text-2xl font-bold text-slate-700">-</div>
+                        </div>
+                        <div class="bg-slate-50 border border-slate-200 p-5 rounded-xl text-center">
+                            <div class="text-xs text-slate-500 mb-2 font-medium">Рекомендуемая доля,<br>исходя из стоимости</div>
+                            <div id="res_opeka_value_only" class="text-2xl font-bold text-slate-700">-</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-[#FFFBEB] border border-[#FDE68A] p-6 rounded-xl text-center cursor-pointer hover:shadow-md transition-all group" onclick="copyText('res_opeka_final')">
+                        <div class="text-sm text-amber-800 mb-3 font-bold uppercase tracking-wide">Рекомендуемая доля к выделению,<br>исходя из площади и стоимости</div>
+                        <div id="res_opeka_final" class="text-4xl font-bold text-amber-600 group-hover:scale-105 transition-transform inline-block">-</div>
+                        <div class="text-[10px] text-amber-700/60 mt-3 uppercase tracking-wide">Кликните, чтобы скопировать текст для договора</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="toast" class="fixed bottom-6 right-6 bg-slate-800 text-white px-6 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 text-sm font-medium flex items-center">
+            <svg class="w-5 h-5 mr-2 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            Текст скопирован!
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            document.getElementById('tab-content-msk').classList.add('hidden');
+            document.getElementById('tab-content-opeka').classList.add('hidden');
+            
+            const inactiveClass = "px-6 py-2.5 bg-white text-slate-600 hover:bg-slate-50 rounded-md font-medium transition-colors border border-slate-200 shadow-sm text-sm";
+            const activeClass = "px-6 py-2.5 bg-primary text-white rounded-md font-medium transition-colors shadow-sm border border-primary text-sm";
+            
+            document.getElementById('tab-btn-msk').className = inactiveClass;
+            document.getElementById('tab-btn-opeka').className = inactiveClass;
+            
+            document.getElementById(`tab-content-${tabId}`).classList.remove('hidden');
+            document.getElementById(`tab-btn-${tabId}`).className = activeClass;
+        }
+
+        function formatCurrency(input) {
+            let value = input.value.replace(/[^0-9.,]/g, '').replace(',', '.');
+            let parts = value.split('.');
+            let intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' '); 
+            
+            if (parts.length > 1) {
+                input.value = intPart + '.' + parts[1].substring(0, 2); 
+            } else {
+                input.value = intPart;
+            }
+        }
+
+        function getRawValue(id) {
+            let val = document.getElementById(id).value;
+            if (!val) return 0;
+            let raw = val.replace(/\s/g, '').replace(',', '.');
+            return parseFloat(raw) || 0;
+        }
+
+        async function calculate() {
+            const payload = {
+                price_buy: getRawValue('price'),
+                area_buy: getRawValue('area'),
+                msk_sum: getRawValue('msk'),
+                family_count: parseInt(document.getElementById('family').value || 1)
+            };
+
+            const response = await fetch('/api/calculate-msk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            
+            document.getElementById('msk_results').classList.remove('hidden');
+            document.getElementById('res_money').innerText = data.money_per_person.toLocaleString('ru-RU') + ' ₽';
+            document.getElementById('res_min_fraction').innerText = data.min_share;
+            document.getElementById('res_min_sqm').innerText = `~ ${data.min_share_sqm} кв. м.`;
+
+            document.getElementById('res_100').innerText = data.shares.decimal_100;
+            document.getElementById('res_area').innerText = data.shares.by_area;
+            document.getElementById('res_simple').innerText = data.shares.simple;
+        }
+
+        async function calculateOpeka() {
+            const bufferArea = document.getElementById('use_buffer').checked ? 1.0 : 0.0;
+            const payload = {
+                old_price: getRawValue('old_price'),
+                old_area: getRawValue('old_area'),
+                child_num: parseInt(document.getElementById('child_num').value || 1),
+                child_den: parseInt(document.getElementById('child_den').value || 1),
+                new_price: getRawValue('new_price'),
+                new_area: getRawValue('new_area'),
+                buffer_area: bufferArea
+            };
+
+            const response = await fetch('/api/calculate-opeka', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            
+            if (data.status === 'error') {
+                alert(data.message);
+                return;
+            }
+
+            document.getElementById('opeka_results').classList.remove('hidden');
+            
+            document.getElementById('res_old_area').innerText = data.old_stats.area + ' м²';
+            document.getElementById('res_old_value').innerText = data.old_stats.value.toLocaleString('ru-RU') + ' ₽';
+            
+            document.getElementById('res_new_area').innerText = data.new_stats.area + ' м²';
+            document.getElementById('res_new_value').innerText = data.new_stats.value.toLocaleString('ru-RU') + ' ₽';
+
+            // Новые поля вывода
+            document.getElementById('res_opeka_area_only').innerText = data.shares.by_area;
+            document.getElementById('res_opeka_value_only').innerText = data.shares.by_value;
+            document.getElementById('res_opeka_final').innerText = data.shares.final;
+        }
+
+        // Автоматическая замена запятой на точку и защита от лишних символов
+        function formatArea(input) {
+            let value = input.value;
+            value = value.replace(/,/g, '.');
+            value = value.replace(/[^0-9.]/g, '');
+            let parts = value.split('.');
+            if (parts.length > 2) {
+               value = parts[0] + '.' + parts.slice(1).join('');
+            }    
+            input.value = value;
+        }
+
+        function copyText(elementId) {
+            const fraction = document.getElementById(elementId).innerText;
+            if (fraction === '-') return;
+            const textToCopy = `...в общую долевую собственность. Доля несовершеннолетнего составляет ${fraction} в праве общей долевой собственности.`;
+            
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const toast = document.getElementById('toast');
+                toast.classList.remove('translate-y-20', 'opacity-0');
+                setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
+            });
+        }
+    </script>
+</body>
+</html>
