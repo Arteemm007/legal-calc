@@ -161,11 +161,23 @@
                     </div>
                 </div>
 
-                <div class="flex items-center bg-white p-4 rounded-lg border border-slate-200 mb-6 shadow-sm">
-                    <input type="checkbox" id="use_buffer" class="w-5 h-5 text-accent bg-slate-50 border-slate-300 rounded focus:ring-accent focus:ring-2 cursor-pointer" checked>
-                    <label for="use_buffer" class="ml-3 text-sm text-slate-600 cursor-pointer">
-                        Добавить запас <span class="font-bold text-slate-800">+1 м²</span> к старой площади ребенка
-                    </label>
+                <!-- Блок с чекбоксами -->
+                <div class="space-y-3 mb-6">
+                    <!-- Старый чекбокс: Запас +1 кв.м -->
+                    <div class="flex items-center bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                        <input type="checkbox" id="use_buffer" class="w-5 h-5 text-accent bg-slate-50 border-slate-300 rounded focus:ring-accent focus:ring-2 cursor-pointer" checked>
+                        <label for="use_buffer" class="ml-3 text-sm text-slate-600 cursor-pointer">
+                            Добавить запас <span class="font-bold text-slate-800">+1 м²</span> к старой площади ребенка
+                        </label>
+                    </div>
+
+                    <!-- Новый чекбокс: Правило 6 кв.м. -->
+                    <div class="flex items-center bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                        <input type="checkbox" id="enforce_6sqm" class="w-5 h-5 text-accent bg-slate-50 border-slate-300 rounded focus:ring-accent focus:ring-2 cursor-pointer" checked>
+                        <label for="enforce_6sqm" class="ml-3 text-sm text-slate-600 cursor-pointer">
+                            Соблюдать правило о микродолях: минимум <span class="font-bold text-slate-800">6 м²</span> (ст. 30 ЖК РФ)
+                        </label>
+                    </div>
                 </div>
 
                 <button onclick="calculateOpeka()" class="bg-primary hover:bg-primaryHover text-white font-medium py-2.5 px-6 rounded-md transition-colors shadow-sm text-sm w-full">
@@ -279,6 +291,8 @@
 
         async function calculateOpeka() {
             const bufferArea = document.getElementById('use_buffer').checked ? 1.0 : 0.0;
+            const enforce6sqm = document.getElementById('enforce_6sqm').checked; // Считываем новый чекбокс
+
             const payload = {
                 old_price: getRawValue('old_price'),
                 old_area: getRawValue('old_area'),
@@ -286,7 +300,8 @@
                 child_den: parseInt(document.getElementById('child_den').value || 1),
                 new_price: getRawValue('new_price'),
                 new_area: getRawValue('new_area'),
-                buffer_area: bufferArea
+                buffer_area: bufferArea,
+                enforce_min_6sqm: enforce6sqm // Передаем на сервер
             };
 
             const response = await fetch('/api/calculate-opeka', {

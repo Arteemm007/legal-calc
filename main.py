@@ -70,8 +70,9 @@ class OpekaRequest(BaseModel):
     new_price: float
     new_area: float
     buffer_area: float = 0.0
+    enforce_min_6sqm: bool = False # Новый параметр для правила 6 кв.м.
 
-# Вспомогательная функция для перевода в простую дробь (с округлением вверх)
+# Вспомогательная функция (оставляем ту, что с циклом для строгого округления)
 def get_simple_fraction(decimal_value: float) -> str:
     if decimal_value <= 0: return "0/1"
     if decimal_value >= 1: return "1/1"
@@ -80,19 +81,14 @@ def get_simple_fraction(decimal_value: float) -> str:
     best_d = 1
     min_diff = float('inf')
     
-    # Перебираем знаменатели от 1 до 99 (чтобы дробь оставалась компактной)
     for d in range(1, 100):
-        # Строгое округление ВВЕРХ для каждого числителя
         n = math.ceil(decimal_value * d)
         diff = (n / d) - decimal_value
-        
-        # Ищем минимальную погрешность, но только в положительную сторону (n/d >= decimal_value)
         if 0 <= diff < min_diff:
             min_diff = diff
             best_n = n
             best_d = d
             
-    # На случай, если дробь можно сократить (например, 2/4 -> 1/2)
     exact = Fraction(best_n, best_d)
     return f"{exact.numerator}/{exact.denominator}"
 
@@ -110,15 +106,23 @@ async def calculate_opeka(data: OpekaRequest):
     # Итоговая целевая доля (максимальная из двух)
     target_share = max(min_share_by_area, min_share_by_value)
 
-    if target_share > 1:
-        return {"status": "error", "message": "Недостаточно площади или стоимости нового объекта для выделения доли (с учетом запаса)."}
+    # 3. ПРИМЕНЯЕМ ПРАВИЛО 6 КВ.М.
+    if data.enforce_min_6sqm and data.new_area > 0:
+        min_share_6sqm = 6.0 / data.new_area
+        if target_share < min_share_6sqm:
+            target_share = min_share_6sqm
+            # Подтягиваем долю по площади, чтобы в UI-карточке тоже обновилась цифра
+            min_share_by_area = max(min_share_by_area, min_share_6sqm) 
 
-    # 3. Переводим все 3 показателя в простые дроби
+    if target_share > 1:
+        return {"status": "error", "message": "Недостаточно площади или стоимости нового объекта. Требуемая доля превышает 100% квартиры."}
+
+    # 4. Переводим все 3 показателя в простые дроби
     share_area_str = get_simple_fraction(min_share_by_area)
     share_value_str = get_simple_fraction(min_share_by_value)
     share_final_str = get_simple_fraction(target_share)
 
-    # 4. Считаем реальные показатели, которые получатся при итоговой дроби
+    # 5. Считаем реальные показатели по итоговой дроби
     final_val = float(Fraction(share_final_str))
 
     return {
